@@ -30,9 +30,7 @@ int main(){
                 dpr2[j] = max(dpr1[j-1], dpr2[j-1]);
             }
         }
-
     }
-    cout << dpr2[j-1] << endl;
     return 0;
 }
 
