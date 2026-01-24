@@ -28,3 +28,14 @@ Rank mi = (lo + hi) / 2;
 } //lo + 1 =hi
 return lo-1; //returns index of largest num not bigger than e (infimum)
 }
+
+//Interpolation Search
+template <typename T> Rank interpoSearch(T * S; T& e, Rank lo, Rank hi){
+    while(hi > low){
+        //Assume uniform distribution, the difference between e and S[lo] divided by difference of S[hi] to S[lo] is the distance that e covers
+        Rank mi = lo + (hi-lo)*((e - S[lo])/(S[hi]- S[lo])); //start from lo, increase by this distance
+        (e < S[mi]) ? hi = mi: lo = mi + 1;
+    }
+    return lo-1;
+}
+
