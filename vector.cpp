@@ -1,13 +1,12 @@
 #include <bits/stdc++.h>
 using namespace std;
-typedef uint64_t Rank;
+using Rank = unsigned int; //秩
+#define DEFAULT_CAPACITY  3 //默认的初始容量（实际应用中可设置为更大）
 
 template <typename T>
 class Vector {
 private:
-    T* _elem;
-    Rank _capacity; //容量 // capacity
-    Rank _size;
+    Rank _size; Rank _capacity;  T* _elem; //规模、容量、数据区
 
 protected:
     void copy( const T* A, Rank lo, Rank hi );
@@ -138,6 +137,49 @@ Rank Vector<T>::search( const T& e ) const {
     return search( e, 0, _size ); //整体查找
 }
 
+// ============================================================================
+// BINARY SEARCH ALGORITHM EXPLANATION
+// ============================================================================
+// In a sorted vector, every element is a pivot point. When searching:
+//
+// THREE-WAY COMPARISON STRATEGY:
+// Compare target element e with middle element [mid]:
+//
+//   1. e < [mid]  → e can ONLY be in LEFT half [lo, mid)
+//                 → Eliminate RIGHT half [mid, hi)
+//                 → Recursively search [lo, mid)
+//
+//   2. e > [mid]  → e can ONLY be in RIGHT half (mid, hi)
+//                 → Eliminate LEFT half [lo, mid]
+//                 → Recursively search (mid, hi)
+//
+//   3. e == [mid] → FOUND! Search ends immediately
+//
+// WHY O(log n) TIME COMPLEXITY?
+// ==============================
+// Each recursive call chooses the MIDDLE element as pivot:
+//
+//   Initial:   [1,2,3,4,5,6,7,8]  (size = 8)
+//                     ↑ mid
+//   After 1st: [1,2,3,4] OR [5,6,7,8]  (size = 4) ← HALVED
+//               ↑ mid           ↑ mid
+//   After 2nd: [1,2] OR [3,4]          (size = 2) ← HALVED
+//             ↑ mid    ↑ mid
+//   After 3rd: [1] OR [2]              (size = 1) ← FOUND or Done
+//
+// Each recursion HALVES the search space (or finds element):
+// n → n/2 → n/4 → n/8 → ... → 1
+//
+// Number of halvings needed = log₂(n)
+// Since each level does O(1) comparison work:
+// Total Time Complexity = O(log n)
+//
+// EXAMPLE: Search for 6 in [1,2,3,4,5,6,7,8]
+//   Step 1: mid=4, e>4 → search [5,6,7,8]
+//   Step 2: mid=6, e=6 → FOUND!
+//   Depth: 2 steps = log₂(8) ✓
+// ============================================================================
+
 template <typename T>
 // Range search: Find element e in range [lo, hi)
 // Randomly chooses between binary search and Fibonacci search for testing
@@ -147,6 +189,109 @@ Rank Vector<T>::search( const T& e, Rank lo, Rank hi ) const {
         binSearch( _elem, e, lo, hi ) :  //区间查找：二分查找算法 // binary search algorithm
         fibSearch( _elem, e, lo, hi ) ;  //Fibonacci查找算法 // Fibonacci search algorithm
 }
+
+// ============================================================================
+// BINARY SEARCH IMPLEMENTATIONS - TWO VERSIONS
+// ============================================================================
+
+// VERSION 1: Standard Binary Search (3-branch, early termination)
+// ================================================================
+template <typename T>
+// Binary search: Find element e in sorted array S[lo, hi)
+// Uses divide-and-conquer to eliminate half the search space each iteration
+//
+// ALGORITHM FLOW:
+// 1. Find middle element at position mi = (lo + hi) / 2
+// 2. Compare e with S[mi]:
+//    - If e < S[mi]: search LEFT half [lo, mi)
+//    - If e > S[mi]: search RIGHT half (mi+1, hi)
+//    - If e == S[mi]: return mi (element found!)
+// 3. Repeat until lo >= hi
+//
+// CHARACTERISTICS:
+// ✓ Can terminate early when element found
+// ✓ Makes at most 2 comparisons per iteration
+// ✗ 3-way branching may be less cache-friendly
+// ✗ Returns -1 on failure (cannot indicate insertion position)
+// ✗ For duplicates, may return any occurrence (not necessarily the largest rank)
+//
+// Time Complexity: O(log n) average case (can be faster with early termination)
+// Space Complexity: O(1)
+//
+Rank binSearch_V1( T* S, const T& e, Rank lo, Rank hi ) {
+    while ( lo < hi ) {
+        // Each iteration: 3 branches, at most 2 comparisons
+        Rank mi = (lo + hi) / 2; //以中位数为轴点，区间宽度折半 // middle element as pivot, halve interval width
+        
+        if ( e < S[mi] )
+            hi = mi; //深入前缀[lo, mi) // search left prefix
+        else if ( S[mi] < e )
+            lo = mi + 1; //深入后缀(mi, hi) // search right suffix
+        else
+            return mi; //命中，收工：有多个e时，不能保证返回秩最大者 // found! (if duplicates exist, any occurrence may be returned)
+    }
+    // Exit condition: lo == hi (search space exhausted)
+    return -1; //失败 // not found; return -1 (but cannot precisely indicate where failure occurred)
+} //但-1不能指示失败的位置 // but -1 cannot indicate the failed position
+
+// VERSION 2: Improved Binary Search (2-branch, returns insertion position)
+// ========================================================================
+template <typename T>
+// Optimized binary search that always returns a valid position
+// This version uses ONLY 1 comparison per iteration (2-way branch instead of 3-way)
+//
+// KEY IMPROVEMENTS OVER VERSION 1:
+// 1. Only ONE comparison per iteration (e < S[mi]) → better performance
+// 2. TWO branches instead of three → simpler control flow, better branch prediction
+// 3. Returns valid insertion position on failure (not -1)
+// 4. Handles edge case where e < S[lo] (equivalent to e = -infinity)
+// 5. For duplicates, returns position of RIGHTMOST occurrence
+//
+// ALGORITHM INVARIANT:
+// - Maintains: S[lo] <= e < S[hi] throughout loop
+// - Exit condition: hi = lo + 1 (only 1 element gap)
+// - Final result: lo is the largest index where S[lo] <= e
+//
+// TRADEOFF:
+// ✓ Faster: 1 comparison/iteration vs 2
+// ✓ Returns insertion position for non-existent elements
+// ✓ Consistent result for duplicates (rightmost)
+// ✗ Cannot terminate early (always runs full log n iterations)
+// ✗ Requires post-check to verify if element actually exists
+//
+// Time Complexity: O(log n) worst case (always, no early termination)
+// Space Complexity: O(1)
+//
+Rank binSearch( T* S, const T& e, Rank lo, Rank hi ) {
+    if ( e < S[lo] ) return lo - 1; //相当于e = -inf // edge case: e less than smallest element (treat as -infinity)
+    
+    while ( 1 < hi - lo ) { //每步迭代一次比较、两个分支；不能提前终止 // each iteration: 1 comparison, 2 branches; cannot terminate early
+        Rank mi = (lo + hi) / 2; //以中位数为轴点，区间宽度折半 // middle element as pivot, halve interval width
+        
+        if ( e < S[mi] )
+            hi = mi; //经比较后确定深入前缀[lo,mi) // after comparison, search left prefix [lo, mi)
+        else
+            lo = mi; //或后缀[mi,hi) // or search right suffix [mi, hi)
+    }
+    // Exit: hi = lo + 1 (adjacent indices)
+    // lo points to largest element <= e
+    return lo; //返回不大于e的最大秩 // return largest rank where S[rank] <= e
+} //binSearch
+
+// ============================================================================
+// COMPARISON SUMMARY:
+// ============================================================================
+// VERSION 1 (3-branch):
+//   - Best for: Finding if element exists (yes/no queries)
+//   - Early exit on match
+//   - Returns -1 for failure (ambiguous position)
+//
+// VERSION 2 (2-branch):
+//   - Best for: Finding insertion position, handling duplicates consistently
+//   - Always runs full depth
+//   - Returns position even when element not found
+//   - Useful for ordered insertion, range queries
+// ============================================================================
 
 template <typename K, typename V>
 // Entry template: Key-value pair for dictionary/map like operations
@@ -268,3 +413,4 @@ void Vector<T>::uniquify() {
 int main() {
     return 0;
 }
+
