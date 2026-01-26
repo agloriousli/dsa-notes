@@ -1,4 +1,4 @@
-//Version A
+//Version A： Onky check mid
 
 template <typename T> Rank binSearch( T* S, const T& e, Rank lo, Rank hi ) {
 while ( lo < hi ) { //3 Branches, left needs one comparison, right needs two comparisons
