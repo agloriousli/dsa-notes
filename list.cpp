@@ -202,7 +202,9 @@ return sum; //返回总和
 template <typename T> struct Compare { //判断线性序列中的一个元素是否与其前驱顺序
 T pred; int & inv; //前驱、（相邻）逆序对的计数器
 Compare( int & inversions, T & first ) : pred( first ), inv( inversions ) {}
-virtual void operator() ( T & e ) { inv += ( pred > e ); pred = e; }
+virtual void operator() ( T & e ) { //Functor
+   inv += ( pred > e ); pred = e; 
+   }
 }; //Compare
 
 template <typename T> int inv( List<T> & L ) { //判断列表是否整体有序
@@ -210,6 +212,18 @@ int inversions = 0;
 L.traverse( Compare<T>( inversions, L[0]->data ) ); //以Compare为基本操作做遍历
 return inversions; //返回总数
 }
+
+/*
+Functors:
+1. Create an object of Cumulate
+int total = 0;
+Cumulate<int> accumulator(total);  // s references total
+
+// Call it like a function:
+int x = 5;
+accumulator(x);  // Calls accumulator.operator()(x)
+// total now = 5
+*/
 /*
 列表 (list)
 节点 (node)
