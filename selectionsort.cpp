@@ -1,5 +1,6 @@
 #include <bits/stdc++.h>
 #include <listnode.h>
+#include <list.cpp>
 
 template <typename T>
 //Will get the max
