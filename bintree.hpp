@@ -3,7 +3,7 @@
 
 #include "binnode.hpp"
 
-// Helper macro (assuming definition from context)
+// Helper macro 
 #ifndef FromParentTo
 #define FromParentTo(x) /* Implementation depends on parent's child pointer */
 #endif
